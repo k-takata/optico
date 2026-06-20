@@ -11,7 +11,6 @@ from PIL import Image
 
 ICONDIR_STRUCT = struct.Struct("<HHH")
 ICONDIRENTRY_STRUCT = struct.Struct("<BBBBHHII")
-BITMAPFILEHEADER_STRUCT = struct.Struct("<2sIHHI")
 BITMAPINFOHEADER_SIZE = 40
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 BI_RGB = 0
@@ -222,12 +221,11 @@ def _bitmap_entry_to_png(payload: bytes) -> tuple[bytes, int, int]:
     if header_size < BITMAPINFOHEADER_SIZE or len(payload) < header_size:
         raise IcoError("unsupported bitmap header")
 
-    header = bytearray(payload[:header_size])
-    width = struct.unpack_from("<i", header, 4)[0]
-    total_height = struct.unpack_from("<i", header, 8)[0]
-    planes = struct.unpack_from("<H", header, 12)[0]
-    bit_count = struct.unpack_from("<H", header, 14)[0]
-    compression = struct.unpack_from("<I", header, 16)[0]
+    width = struct.unpack_from("<i", payload, 4)[0]
+    total_height = struct.unpack_from("<i", payload, 8)[0]
+    planes = struct.unpack_from("<H", payload, 12)[0]
+    bit_count = struct.unpack_from("<H", payload, 14)[0]
+    compression = struct.unpack_from("<I", payload, 16)[0]
 
     if planes != 1 or bit_count != 32:
         raise IcoError(f"unsupported bitmap format ({bit_count} bpp)")
@@ -238,39 +236,54 @@ def _bitmap_entry_to_png(payload: bytes) -> tuple[bytes, int, int]:
     if actual_height <= 0:
         raise IcoError("bitmap height is invalid")
 
-    signed_height = actual_height if total_height >= 0 else -actual_height
-    struct.pack_into("<i", header, 8, signed_height)
+    pixel_width = abs(width)
+    if pixel_width <= 0:
+        raise IcoError("bitmap width is invalid")
 
     mask_bytes = 0
     if header_size == BITMAPINFOHEADER_SIZE and compression == BI_BITFIELDS:
         mask_bytes = 12
 
-    xor_stride = abs(width) * 4
+    xor_stride = pixel_width * 4
     xor_size = xor_stride * actual_height
     xor_offset = header_size + mask_bytes
     xor_end = xor_offset + xor_size
     if xor_end > len(payload):
         raise IcoError("bitmap pixel data is truncated")
 
-    prefix = bytes(header)
-    if mask_bytes:
-        prefix += payload[header_size:xor_offset]
-
-    bmp_header = BITMAPFILEHEADER_STRUCT.pack(
-        b"BM",
-        14 + len(prefix) + xor_size,
-        0,
-        0,
-        14 + len(prefix),
+    rgba_image = _decode_bgra32_to_rgba(
+        payload[xor_offset:xor_end],
+        pixel_width,
+        actual_height,
+        bottom_up=total_height >= 0,
     )
-    bmp_bytes = bmp_header + prefix + payload[xor_offset:xor_end]
+    buffer = BytesIO()
+    rgba_image.save(buffer, format="PNG")
+    return buffer.getvalue(), pixel_width, actual_height
 
-    with Image.open(BytesIO(bmp_bytes)) as image:
-        rgba_image = image.convert("RGBA")
-        width_out, height_out = rgba_image.size
-        buffer = BytesIO()
-        rgba_image.save(buffer, format="PNG")
-    return buffer.getvalue(), width_out, height_out
+
+def _decode_bgra32_to_rgba(xor_data: bytes, width: int, height: int, bottom_up: bool) -> Image.Image:
+    expected_size = width * height * 4
+    if len(xor_data) < expected_size:
+        raise IcoError("bitmap pixel data is truncated")
+
+    image = Image.new("RGBA", (width, height))
+    pixels = image.load()
+    if pixels is None:
+        raise IcoError("failed to allocate bitmap pixels")
+
+    for y in range(height):
+        source_row = (height - 1 - y) if bottom_up else y
+        row_offset = source_row * width * 4
+        for x in range(width):
+            i = row_offset + x * 4
+            blue = xor_data[i]
+            green = xor_data[i + 1]
+            red = xor_data[i + 2]
+            alpha = xor_data[i + 3]
+            pixels[x, y] = (red, green, blue, alpha)
+
+    return image
 
 
 def _png_dimensions(payload: bytes) -> tuple[int, int]:
