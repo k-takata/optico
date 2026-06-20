@@ -15,8 +15,10 @@ python -m pip install -e .
 Or, to test this without installing:
 
 ```bash
-export PYTHONPATH=$PWD
+export PYTHONPATH=$PWD/src
 ```
+
+To optimize `input.ico`:
 
 ```bash
 python -m optico input.ico --output-dir extracted --rebuild rebuilt.ico
