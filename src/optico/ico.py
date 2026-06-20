@@ -101,7 +101,7 @@ def optimize_pngs(png_paths: Sequence[Path], optipng_command: str) -> None:
     for png_path in png_paths:
         try:
             completed = subprocess.run(
-                [optipng_command, "-quiet", "-o7", str(png_path)],
+                [optipng_command, "-quiet", "-nx", "-o7", str(png_path)],
                 check=False,
                 capture_output=True,
                 text=True,
