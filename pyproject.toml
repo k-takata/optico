@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "optico"
+version = "0.1.0"
+description = "Extract PNG and 32bpp bitmap images from ICO files, optimize them, and rebuild ICO files."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["Pillow>=10.0.0"]
+
+[project.scripts]
+optico = "optico.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
