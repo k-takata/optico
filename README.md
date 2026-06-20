@@ -16,6 +16,12 @@ python -m pip install -e .
 python -m optico input.ico --output-dir extracted --rebuild rebuilt.ico
 ```
 
+Add `--verbose` to print per-frame details during extraction:
+
+```bash
+python -m optico input.ico --output-dir extracted --rebuild rebuilt.ico --verbose
+```
+
 Or after installation:
 
 ```bash

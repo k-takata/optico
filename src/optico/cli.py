@@ -27,6 +27,11 @@ def build_parser() -> ArgumentParser:
         default="optipng",
         help="optipng command to run for PNG optimization.",
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print per-frame details during extraction.",
+    )
     return parser
 
 
@@ -44,6 +49,20 @@ def main(argv: list[str] | None = None) -> int:
     result = extract_icon_pngs(ico_path, output_dir)
     if not result.extracted_frames:
         parser.error("no PNG or 32bpp bitmap frames were found")
+
+    if args.verbose:
+        for frame in result.extracted_frames:
+            print(
+                "frame "
+                f"{frame.index}: "
+                f"{frame.source_kind} "
+                f"{frame.width}x{frame.height} "
+                f"bit_count={frame.bit_count} "
+                f"planes={frame.planes} "
+                f"color_count={frame.color_count} "
+                f"optimizable={frame.optimizable} "
+                f"path={frame.file_path}"
+            )
 
     if result.skipped_frames:
         for message in result.skipped_frames:
