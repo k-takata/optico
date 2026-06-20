@@ -12,6 +12,12 @@ Install the package first:
 python -m pip install -e .
 ```
 
+Or, to test this without installing:
+
+```bash
+export PYTHONPATH=$PWD
+```
+
 ```bash
 python -m optico input.ico --output-dir extracted --rebuild rebuilt.ico
 ```
