@@ -26,6 +26,9 @@ class IconFrame:
     source_kind: str
     file_path: Path
     optimizable: bool
+    color_count: int
+    planes: int
+    bit_count: int
 
 
 @dataclass(frozen=True)
@@ -65,6 +68,15 @@ def extract_icon_pngs(ico_path: Path, output_dir: Path) -> ExtractionResult:
             skipped_frames.append(f"frame {entry.index}: {exc}")
             continue
 
+        if source_kind.startswith("bitmap") and source_kind != "bitmap32":
+            color_count = entry.color_count
+            planes = entry.planes
+            bit_count = entry.bit_count
+        else:
+            color_count = 0
+            planes = 1
+            bit_count = 32
+
         output_name = f"frame_{entry.index:02d}_{actual_width}x{actual_height}{file_extension}"
         output_path = output_dir / output_name
         output_path.write_bytes(file_bytes)
@@ -76,6 +88,9 @@ def extract_icon_pngs(ico_path: Path, output_dir: Path) -> ExtractionResult:
                 source_kind=source_kind,
                 file_path=output_path,
                 optimizable=optimizable,
+                color_count=color_count,
+                planes=planes,
+                bit_count=bit_count,
             )
         )
 
@@ -102,14 +117,14 @@ def optimize_pngs(png_paths: Sequence[Path], optipng_command: str) -> None:
 
 
 def rebuild_ico_from_pngs(frames: Sequence[IconFrame], output_path: Path) -> None:
-    frame_payloads: list[tuple[int, int, bytes]] = []
+    frame_payloads: list[tuple[IconFrame, int, int, bytes]] = []
     for frame in frames:
         payload = frame.file_path.read_bytes()
         if frame.source_kind in {"png", "bitmap32"}:
             width, height = _png_dimensions(payload)
         else:
             width, height = frame.width, frame.height
-        frame_payloads.append((width, height, payload))
+        frame_payloads.append((frame, width, height, payload))
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -120,15 +135,15 @@ def rebuild_ico_from_pngs(frames: Sequence[IconFrame], output_path: Path) -> Non
     directory_entries = []
     payload_chunks = []
 
-    for width, height, payload in frame_payloads:
+    for frame, width, height, payload in frame_payloads:
         directory_entries.append(
             ICONDIRENTRY_STRUCT.pack(
                 0 if width >= 256 else width,
                 0 if height >= 256 else height,
+                frame.color_count,
                 0,
-                0,
-                1,
-                32,
+                frame.planes,
+                frame.bit_count,
                 len(payload),
                 offset,
             )
