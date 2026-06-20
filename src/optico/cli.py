@@ -68,7 +68,10 @@ def main(argv: list[str] | None = None) -> int:
         for message in result.skipped_frames:
             print(f"skip: {message}")
 
-    optimize_pngs([frame.file_path for frame in result.extracted_frames if frame.optimizable], args.optipng)
+    optimize_pngs(
+        [frame.file_path for frame in result.extracted_frames if frame.optimizable],
+        args.optipng,
+    )
     rebuild_ico_from_pngs(result.extracted_frames, rebuild_path)
 
     print(f"extracted {len(result.extracted_frames)} frame(s) to {output_dir}")

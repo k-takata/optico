@@ -62,7 +62,14 @@ def extract_icon_pngs(ico_path: Path, output_dir: Path) -> ExtractionResult:
 
     for entry in entries:
         try:
-            file_bytes, actual_width, actual_height, source_kind, file_extension, optimizable = _entry_to_export(entry)
+            (
+                file_bytes,
+                actual_width,
+                actual_height,
+                source_kind,
+                file_extension,
+                optimizable,
+            ) = _entry_to_export(entry)
         except IcoError as exc:
             skipped_frames.append(f"frame {entry.index}: {exc}")
             continue
@@ -76,7 +83,9 @@ def extract_icon_pngs(ico_path: Path, output_dir: Path) -> ExtractionResult:
             planes = 1
             bit_count = 32
 
-        output_name = f"frame_{entry.index:02d}_{actual_width}x{actual_height}{file_extension}"
+        output_name = (
+            f"frame_{entry.index:02d}_{actual_width}x{actual_height}{file_extension}"
+        )
         output_path = output_dir / output_name
         output_path.write_bytes(file_bytes)
         extracted_frames.append(
@@ -93,7 +102,9 @@ def extract_icon_pngs(ico_path: Path, output_dir: Path) -> ExtractionResult:
             )
         )
 
-    return ExtractionResult(extracted_frames=extracted_frames, skipped_frames=skipped_frames)
+    return ExtractionResult(
+        extracted_frames=extracted_frames, skipped_frames=skipped_frames
+    )
 
 
 def optimize_pngs(png_paths: Sequence[Path], optipng_command: str) -> None:
@@ -150,7 +161,9 @@ def rebuild_ico_from_pngs(frames: Sequence[IconFrame], output_path: Path) -> Non
         payload_chunks.append(payload)
         offset += len(payload)
 
-    output_path.write_bytes(header + b"".join(directory_entries) + b"".join(payload_chunks))
+    output_path.write_bytes(
+        header + b"".join(directory_entries) + b"".join(payload_chunks)
+    )
 
 
 def _read_ico_entries(ico_path: Path) -> list[_IconEntry]:
@@ -210,7 +223,14 @@ def _entry_to_export(entry: _IconEntry) -> tuple[bytes, int, int, str, str, bool
         png_bytes, width, height = _bitmap_entry_to_png(entry.payload)
         return png_bytes, width, height, "bitmap32", ".png", True
 
-    return entry.payload, entry.width, entry.height, f"bitmap{entry.bit_count}", ".dib", False
+    return (
+        entry.payload,
+        entry.width,
+        entry.height,
+        f"bitmap{entry.bit_count}",
+        ".dib",
+        False,
+    )
 
 
 def _bitmap_entry_to_png(payload: bytes) -> tuple[bytes, int, int]:
@@ -262,7 +282,9 @@ def _bitmap_entry_to_png(payload: bytes) -> tuple[bytes, int, int]:
     return buffer.getvalue(), pixel_width, actual_height
 
 
-def _decode_bgra32_to_rgba(xor_data: bytes, width: int, height: int, bottom_up: bool) -> Image.Image:
+def _decode_bgra32_to_rgba(
+    xor_data: bytes, width: int, height: int, bottom_up: bool
+) -> Image.Image:
     expected_size = width * height * 4
     if len(xor_data) < expected_size:
         raise IcoError("bitmap pixel data is truncated")
