@@ -45,6 +45,7 @@ def main(argv: list[str] | None = None) -> int:
 
     output_dir = args.output_dir or ico_path.with_name(f"{ico_path.stem}_frames")
     rebuild_path = args.rebuild or ico_path.with_name(f"{ico_path.stem}.optimized.ico")
+    original_size = ico_path.stat().st_size
 
     result = extract_icon_pngs(ico_path, output_dir)
     if not result.extracted_frames:
@@ -73,7 +74,24 @@ def main(argv: list[str] | None = None) -> int:
         args.optipng,
     )
     rebuild_ico_from_pngs(result.extracted_frames, rebuild_path)
+    rebuilt_size = rebuild_path.stat().st_size
+    saved_bytes = original_size - rebuilt_size
 
     print(f"extracted {len(result.extracted_frames)} frame(s) to {output_dir}")
     print(f"rebuilt ICO: {rebuild_path}")
+    if saved_bytes >= 0:
+        saved_percent = (saved_bytes / original_size * 100.0) if original_size else 0.0
+        print(
+            f"size: {original_size} -> {rebuilt_size} bytes "
+            f"(reduced {saved_bytes} bytes, {saved_percent:.2f}%)"
+        )
+    else:
+        increased_bytes = -saved_bytes
+        increased_percent = (
+            (increased_bytes / original_size * 100.0) if original_size else 0.0
+        )
+        print(
+            f"size: {original_size} -> {rebuilt_size} bytes "
+            f"(increased {increased_bytes} bytes, {increased_percent:.2f}%)"
+        )
     return 0
