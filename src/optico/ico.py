@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+import shutil
 import struct
 import subprocess
 from typing import Sequence
@@ -108,6 +109,8 @@ def extract_icon_pngs(ico_path: Path, output_dir: Path) -> ExtractionResult:
 
 
 def optimize_pngs(png_paths: Sequence[Path], optipng_command: str) -> None:
+    advpng_path = shutil.which("advpng")
+
     for png_path in png_paths:
         try:
             completed = subprocess.run(
@@ -121,6 +124,22 @@ def optimize_pngs(png_paths: Sequence[Path], optipng_command: str) -> None:
         if completed.returncode != 0:
             stderr = completed.stderr.strip()
             message = f"optipng failed for {png_path}"
+            if stderr:
+                message = f"{message}: {stderr}"
+            raise IcoError(message)
+
+        if advpng_path is None:
+            continue
+
+        adv_completed = subprocess.run(
+            [advpng_path, "-q", "-z4", str(png_path)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if adv_completed.returncode != 0:
+            stderr = adv_completed.stderr.strip()
+            message = f"advpng failed for {png_path}"
             if stderr:
                 message = f"{message}: {stderr}"
             raise IcoError(message)

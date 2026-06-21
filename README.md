@@ -41,3 +41,4 @@ optico input.ico --output-dir extracted --rebuild rebuilt.ico
 - Python 3.10+
 - Pillow
 - `optipng` available on `PATH`
+- `advpng` on `PATH` (optional, used for an extra optimization pass when available)
